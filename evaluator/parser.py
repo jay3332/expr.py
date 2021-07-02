@@ -140,7 +140,7 @@ class ParserGenerator(metaclass=ParserGeneratorMeta):
                 'DIV': Div,
                 'FLOORDIV': FloorDiv,
                 'MOD': Mod,
-                'Pow': Pow
+                'POW': Pow
             }[token_type](
                 p[0], p[2]
             )
