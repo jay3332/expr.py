@@ -24,12 +24,13 @@ class LexerGenerator(_BaseGenerator):
 
     def add_ignores(self) -> None:
         self.ignore(r'\s+')  # Whitespace
+        self.ignore(r'\n+')  # Newlines
         self.ignore(r'#\s*\[.*\]', re.S)  # Multi-line/inline comments
         self.ignore(r'#.*')  # Comments
 
     def add_basic(self) -> None:
         self.add('NUMBER', r'-?([0-9]+(\.[0-9]*)?|\.[0-9]+)')
-        self.add('NAME', r'[a-zA-Z_]+')
+        self.add('NAME', r'[a-zA-Z_][a-zA-Z0-9_]*')
         self.add('LPAREN', r'\(')
         self.add('RPAREN', r'\)')
         self.add('LBRACE', r'\{')

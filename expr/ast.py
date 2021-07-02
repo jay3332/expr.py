@@ -100,6 +100,6 @@ class Factorial(Token):
 
     def eval(self) -> ET:
         try:
-            return cast(math.factorial(int(self._left)))
+            return cast(math.factorial(int(self._left.eval())))
         except ValueError:
             return cast(0)
