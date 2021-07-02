@@ -3,7 +3,7 @@ from .parser import Parser
 
 __all__: Tuple[str, ...] = (
     'evaluate',
-    'create_session',
+    'create_state',
     'state'
 )
 
@@ -19,5 +19,5 @@ def evaluate(expr: str, **kwargs) -> float:
     return state.evaluate(expr)
 
 
-def create_session(**kwargs) -> Parser:
+def create_state(**kwargs) -> Parser:
     return Parser(**kwargs)
