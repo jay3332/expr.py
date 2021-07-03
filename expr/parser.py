@@ -109,6 +109,7 @@ class Parser(metaclass=ParserMeta):
         _constants: Dict[str, DT] = {
             "pi": _(math.pi),
             "e": _(math.e),
+            "tau": _(math.tau),
             **(constants or {})
         }
 
