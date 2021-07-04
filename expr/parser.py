@@ -39,8 +39,9 @@ __all__: Tuple[str, ...] = (
 getcontext().traps[_ZeroDivision] = True
 
 
-def rule(pattern: str, /, precedence: Optional[str] = None) -> Callable[Callable[PT, RT], Callable[PT, RT]]:
-    def decorator(func: Callable[PT, RT], /) -> Callable[PT, RT]:
+def rule(pattern: str, /, precedence: Optional[str] = None) -> Callable[[Callable[[PT, ...], RT]], Callable[[PT, ...], RT]]:
+    # noinspection PyUnresolvedReferences
+    def decorator(func: Callable[[PT, ...], RT], /) -> Callable[[PT, ...], RT]:
         try:
             func.__parser_generator_rules__.append((pattern, precedence))
         except AttributeError:
@@ -50,7 +51,7 @@ def rule(pattern: str, /, precedence: Optional[str] = None) -> Callable[Callable
     return decorator
 
 
-def error(func: Callable[PT, RT], /) -> Callable[PT, RT]:
+def error(func: Callable[[PT, ...], RT], /) -> Callable[[PT, ...], RT]:
     func.__parser_generator_error__ = True
     return func
 
