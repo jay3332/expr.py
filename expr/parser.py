@@ -2,7 +2,7 @@ import math
 
 from functools import wraps
 from warnings import catch_warnings, simplefilter
-from decimal import Decimal, DivisionByZero as _ZeroDivision, InvalidOperation, DivisionUndefined, getcontext
+from decimal import Decimal, DivisionByZero as _ZeroDivision, InvalidOperation, DivisionUndefined
 
 from rply import ParserGenerator, Token as _Token
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
@@ -28,6 +28,8 @@ __all__: Tuple[str, ...] = (
     'ParserMeta',
     'Parser'
 )
+    
+decimal.getcontext().traps[_ZeroDivision] = True
 
 
 def rule(pattern: str, /, precedence: Optional[str] = None) -> Callable[Callable[PT, RT], Callable[PT, RT]]:
@@ -89,7 +91,6 @@ class Parser(metaclass=ParserMeta):
         if not issubclass(decimal_cls, Decimal):
             raise TypeError('decimal_cls must inherit from decimal.Decimal')
         
-        getcontext().traps[_ZeroDivision] = True
         _ = decimal_cls
         self._max_safe_number: DT = _(max_safe_number)
         self._max_exponent: DT = _(max_exponent)
@@ -257,7 +258,7 @@ class Parser(metaclass=ParserMeta):
         except InvalidOperation as exc:
             if isinstance(exc.args[0][0], DivisionUndefined):
                 raise DivisionByZero()
-            raise BadOperation("Invalid Operation")
+            raise InvalidAction()
 
         except LexingError as exc:
             raise Gibberish(exc)
