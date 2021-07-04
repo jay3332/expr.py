@@ -17,7 +17,8 @@ __all__: Tuple[str, ...] = (
     'InvalidSyntax',
     'UnknownPointer',
     'DivisionByZero',
-    'Gibberish'
+    'Gibberish',
+    'InvalidAction'
 )
 
 
@@ -132,3 +133,13 @@ class DivisionByZero(ZeroDivisionError, ParsingError):
     @property
     def friendly(self) -> str:
         return f'[ERROR] Cannot divide by zero'
+
+
+class InvalidAction(ParsingError):
+    def __init__(self, original: BaseException) -> None:
+        self.original: BaseException = original
+        super().__init__(f'invalid action: {original.__class__.__name__}: {original}')
+
+    @property
+    def friendly(self) -> str:
+        return f'[ERROR] Invalid operation'
