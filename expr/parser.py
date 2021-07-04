@@ -254,8 +254,8 @@ class Parser(metaclass=ParserMeta):
         except (ZeroDivisionError, _ZeroDivision):
             raise DivisionByZero()
 
-        except InvalidOperation as e:
-            if isinstance(e.args[0][0], DivisionUndefined):
+        except InvalidOperation as exc:
+            if isinstance(exc.args[0][0], DivisionUndefined):
                 raise DivisionByZero()
             raise BadOperation("Invalid Operation")
 
