@@ -89,7 +89,7 @@ class Parser(metaclass=ParserMeta):
         if not issubclass(decimal_cls, Decimal):
             raise TypeError('decimal_cls must inherit from decimal.Decimal')
         
-        decimal.getcontext().traps[DivisionByZero] = True
+        decimal.getcontext().traps[_ZeroDivision] = True
         _ = decimal_cls
         self._max_safe_number: DT = _(max_safe_number)
         self._max_exponent: DT = _(max_exponent)
