@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 
 from functools import wraps
@@ -39,9 +41,9 @@ __all__: Tuple[str, ...] = (
 getcontext().traps[_ZeroDivision] = True
 
 
-def rule(pattern: str, /, precedence: Optional[str] = None) -> Callable[[Callable[[PT, ...], RT]], Callable[[PT, ...], RT]]:
+def rule(pattern: str, /, precedence: Optional[str] = None) -> Callable[[Callable[[Parser, PT], RT]], Callable[[Parser, PT], RT]]:
     # noinspection PyUnresolvedReferences
-    def decorator(func: Callable[[PT, ...], RT], /) -> Callable[[PT, ...], RT]:
+    def decorator(func: Callable[[Parser, PT], RT], /) -> Callable[[Parser, PT], RT]:
         try:
             func.__parser_generator_rules__.append((pattern, precedence))
         except AttributeError:
@@ -51,7 +53,7 @@ def rule(pattern: str, /, precedence: Optional[str] = None) -> Callable[[Callabl
     return decorator
 
 
-def error(func: Callable[[PT, ...], RT], /) -> Callable[[PT, ...], RT]:
+def error(func: Callable[[Parser, PT], RT], /) -> Callable[[Parser, PT], RT]:
     func.__parser_generator_error__ = True
     return func
 
@@ -90,7 +92,7 @@ class Parser(metaclass=ParserMeta):
             max_safe_number: float = 9e9,
             max_exponent: float = 128,
             max_factorial: float = 64,
-            builtins: Dict[str, Callable[[DT, ...], DT]] = None,
+            builtins: Dict[str, Callable[[DT], DT]] = None,
             constants: Dict[str, DT] = None,
             variables: Dict[str, DT] = None,
             decimal_cls: Type[DT] = Decimal,
@@ -104,7 +106,7 @@ class Parser(metaclass=ParserMeta):
         self._max_exponent: DT = _(max_exponent)
         self._max_factorial: DT = _(max_factorial)
 
-        _builtins: Dict[str, Callable[[DT, ...], DT]] = {
+        _builtins: Dict[str, Callable[[DT], DT]] = {
             'rad': lambda d: _(math.radians(float(d))),
             'sin': builtin.sin,
             'cos': builtin.cos,
@@ -151,7 +153,7 @@ class Parser(metaclass=ParserMeta):
             **(variables or {})
         }
 
-        self._functions: Dict[str, Callable[[DT, ...], DT]] = _builtins
+        self._functions: Dict[str, Callable[[DT], DT]] = _builtins
 
     def __repr__(self) -> str:
         return f'<expr.{self.__class__.__name__}>'
