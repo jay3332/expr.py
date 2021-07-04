@@ -1,19 +1,20 @@
 import math
 
-from decimal import Decimal
 from functools import wraps
 from warnings import catch_warnings, simplefilter
+from decimal import Decimal, DivisionByZero as _ZeroDivision, InvalidOperation
 
 from rply import ParserGenerator, Token as _Token
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
-from rply.lexer import Lexer
+from rply.lexer import Lexer, LexingError
 from rply.parser import LRParser
 
 from .ast import *
 from .errors import *
 from .util import T as DT
 from .grammar import LexerGenerator
+from . import builtin
 
 T: TypeVar = TypeVar('T')
 LGT: TypeVar = TypeVar('LGT', bound=LexerGenerator)
@@ -21,14 +22,16 @@ LGT: TypeVar = TypeVar('LGT', bound=LexerGenerator)
 PT: TypeVar = TypeVar('PT')
 RT: TypeVar = TypeVar('RT')
 
+OT: TypeVar = TypeVar('OT', bound=Union[float, Decimal])
+
 __all__: Tuple[str, ...] = (
     'ParserMeta',
     'Parser'
 )
 
 
-def rule(pattern: str, precedence: Optional[str] = None) -> Callable[Callable[PT, RT], Callable[PT, RT]]:
-    def decorator(func: Callable[PT, RT]) -> Callable[PT, RT]:
+def rule(pattern: str, /, precedence: Optional[str] = None) -> Callable[Callable[PT, RT], Callable[PT, RT]]:
+    def decorator(func: Callable[PT, RT], /) -> Callable[PT, RT]:
         try:
             func.__parser_generator_rules__.append((pattern, precedence))
         except AttributeError:
@@ -38,7 +41,7 @@ def rule(pattern: str, precedence: Optional[str] = None) -> Callable[Callable[PT
     return decorator
 
 
-def error(func: Callable[PT, RT]) -> Callable[PT, RT]:
+def error(func: Callable[PT, RT], /) -> Callable[PT, RT]:
     func.__parser_generator_error__ = True
     return func
 
@@ -72,6 +75,7 @@ class ParserMeta(type):
 class Parser(metaclass=ParserMeta):
     def __init__(
             self,
+            /,
             *,
             max_safe_number: float = 9e9,
             max_exponent: float = 128,
@@ -92,23 +96,25 @@ class Parser(metaclass=ParserMeta):
 
         _builtins: Dict[str, Callable[[DT, ...], DT]] = {
             'rad': lambda d: _(math.radians(float(d))),
-            'sin': lambda d: _(math.sin(float(d))),
-            'cos': lambda d: _(math.cos(float(d))),
+            'sin': builtin.sin,
+            'cos': builtin.cos,
             'tan': lambda d: _(math.tan(float(d))),
             'asin': lambda d: _(math.asin(float(d))),
             'acos': lambda d: _(math.acos(float(d))),
             'atan': lambda d: _(math.atan(float(d))),
-            'log': lambda d: _(math.log(float(d), 2)),
-            'log10': lambda d: _(math.log(float(d), 10)),
-            'ln': lambda d: _(math.log(float(d))),
-            'sqrt': lambda d: _(math.sqrt(float(d))),
-            'cbrt': lambda d: _(float(d) ** (1 / 3)),
+            'log': lambda d: _(math.log2(float(d))),
+            'log10': Decimal.log10,
+            'ln': Decimal.ln,
+            'sqrt': Decimal.sqrt,
+            'cbrt': lambda d: d ** builtin.one_third,
             **(builtins or {})
         }
 
         _constants: Dict[str, DT] = {
-            "pi": _(math.pi),
-            "e": _(math.e),
+            'pi': builtin.pi,
+            'e': builtin.e,
+            'phi': builtin.phi,
+            'tau': builtin.tau,
             **(constants or {})
         }
 
@@ -119,9 +125,9 @@ class Parser(metaclass=ParserMeta):
             ['NUMBER', 'NAME', 'LPAREN', 'RPAREN', 'ADD', 'SUB', 'MUL',
              'DIV', 'FLOORDIV', 'MOD', 'FAC', 'POW', 'EQ'],
             precedence=[
+                ('right', ['UMINUS']),
                 ('left', ['ADD', 'SUB']),
                 ('left', ['MUL', 'DIV', 'FLOORDIV', 'MOD']),
-                ('right', ['UMINUS']),
                 ('right', ['POW']),
                 ('left', ['FAC']),
             ]
@@ -137,19 +143,18 @@ class Parser(metaclass=ParserMeta):
 
         self._functions: Dict[str, Callable[[DT, ...], DT]] = _builtins
 
+    def __repr__(self) -> str:
+        return f'<expr.{self.__class__.__name__}>'
+
     @rule('expr : NUMBER')
-    def number(self, p: List[_Token]) -> Number:
+    def number(self, p: List[_Token], /) -> Number:
         number = Number(p[0].getstr())
         if number.eval() > self._max_safe_number:
             raise NumberOverflow(number.eval(), self._max_safe_number)
         return number
 
-    @rule("expr : SUB NUMBER", precedence='UMINUS')
-    def uminus(self, p: List[_Token]) -> Any:
-        return -(p[1])
-
     @rule('expr : LPAREN expr RPAREN')
-    def paren(self, p: List[_Token]) -> Any:
+    def paren(self, p: List[_Token], /) -> Any:
         return p[1]
 
     @rule('expr : expr ADD expr')
@@ -160,7 +165,7 @@ class Parser(metaclass=ParserMeta):
     @rule('expr : expr MOD expr')
     @rule('expr : expr POW expr')
     @rule('expr : expr FAC')
-    def operator(self, p: List[_Token]) -> Any:
+    def operator(self, p: List[_Token], /) -> Any:
         token_type = p[1].gettokentype()
 
         if token_type == 'FAC':
@@ -187,14 +192,18 @@ class Parser(metaclass=ParserMeta):
 
             raise BadOperation(token_type)
 
+    @rule("expr : SUB expr", precedence='UMINUS')
+    def uminus(self, p: List[_Token], /) -> Any:
+        return Number(-(p[1].eval()))
+
     @rule('expr : NAME EQ expr')
-    def declare(self, p: List[_Token]) -> Any:
+    def declare(self, p: List[_Token], /) -> Any:
         _name = p[0].getstr()
         _value = p[2].eval()
         self._variables[_name] = _value
 
     @rule('expr : NAME LPAREN expr RPAREN')
-    def function(self, p: List[_Token]) -> Any:
+    def function(self, p: List[_Token], /) -> Any:
         _name = p[0].getstr()
         if _name in self._functions:
             _value = p[2].eval()
@@ -203,7 +212,7 @@ class Parser(metaclass=ParserMeta):
         return Mul(self.getvar(p[0]), p[2])  # Probably this instead
 
     @rule('expr : NAME')
-    def getvar(self, p: List[_Token]) -> Any:
+    def getvar(self, p: List[_Token], /) -> Any:
         name = p[0].getstr()
 
         try:
@@ -212,27 +221,37 @@ class Parser(metaclass=ParserMeta):
             raise UnknownPointer(name)
 
     @rule('expr : expr expr', precedence='MUL')
-    def shortmul(self, p: List[_Token]) -> Any:
+    def implcit_mul(self, p: List[_Token], /) -> Any:
         return Mul(p[0], p[1])
 
     @error
-    def on_error(self, token: _Token) -> Any:
+    def on_error(self, token: _Token, /) -> Any:
         raise InvalidSyntax(token)
 
-    def _build(self) -> LRParser:
+    def _build(self, /) -> LRParser:
         self.__parser__ = res = self.__parser_generator__.build()
         return res
 
-    def _build_lexer(self) -> Lexer:
+    def _build_lexer(self, /) -> Lexer:
         self.__lexer__ = res = self.__lexer_generator__.build()
         return res
 
-    def evaluate(self, expr: str) -> float:
+    def __call__(self, expr: str, /, *, cls: Type[OT] = Decimal) -> Optional[OT]:
+        return self.evaluate(expr, cls=cls)
+
+    def evaluate(self, expr: str, /, *, cls: Type[OT] = Decimal) -> Optional[OT]:
         with catch_warnings():
             simplefilter('ignore')
             parser = self.__parser__ or self._build()
             lexer = self.__lexer__ or self._build_lexer()
 
-        result = parser.parse(lexer.lex(expr), state=self)
-        if result is not None:
-            return result.eval()
+        try:
+            result = parser.parse(lexer.lex(expr), state=self)
+            if result is not None:
+                return cls(result.eval())
+
+        except (ZeroDivisionError, _ZeroDivision, InvalidOperation):
+            raise DivisionByZero()
+
+        except LexingError as exc:
+            raise Gibberish(exc)

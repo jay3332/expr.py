@@ -126,3 +126,32 @@ state2.evaluate('x')  # error (x is not defined)
 
 state1.evaluate('x')  # 1
 ```
+
+## Changelog
+### v0.2
+This update mainly brings bug fixes from v0.1.
+#### What's new?
+- You can now pass in custom classes into `Parser.evaluate`
+- Constants are now precise to around 30 places.
+- New constants (`phi`, `tau`)
+
+##### More precise builtin functions
+v0.2 changes the way some builtin functions are processed
+for boosts on both performance and precision.
+ 
+- `sqrt` now uses `Decimal.sqrt`
+- `log10` now uses `Decimal.log10`
+- `ln` now uses `Decimal.ln`
+- `cbrt` now uses `input ** expr.one_third`
+- `sin` now uses `expr.sin`
+- `cos` now uses `expr.cos`
+
+#### Bug fixes
+- Fixed unary minus interfering with implicit multiplication.
+    - in v0.1: `5-3` = `-15`
+    - in v0.2: `5-3` = `2`
+
+#### Miscellaneous
+- Many functions now have positional-only arguments for slight performance boosts
+    - This drops support for Python 3.7
+- Messages retrieved from `ParsingError.friendly` are now much more descriptive. 

@@ -10,7 +10,7 @@ __all__: Tuple[str, ...] = (
 state: Optional[Parser] = None
 
 
-def evaluate(expr: str, **kwargs) -> float:
+def evaluate(expr: str, /, **kwargs) -> float:
     global state
 
     if not state:

@@ -9,7 +9,7 @@ __all__: Tuple[str, ...] = (
 )
 
 
-def cast(number: str, *, cls: Type[T] = Decimal) -> T:
+def cast(number: str, /, *, cls: Type[T] = Decimal) -> T:
     try:
         return cls(number)
     except DecimalException:
