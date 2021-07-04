@@ -2,7 +2,7 @@ import math
 
 from functools import wraps
 from warnings import catch_warnings, simplefilter
-from decimal import Decimal, DivisionByZero as _ZeroDivision, InvalidOperation, DivisionUndefined
+from decimal import Decimal, DivisionByZero as _ZeroDivision, InvalidOperation, DivisionUndefined, getcontext
 
 from rply import ParserGenerator, Token as _Token
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union
@@ -89,7 +89,7 @@ class Parser(metaclass=ParserMeta):
         if not issubclass(decimal_cls, Decimal):
             raise TypeError('decimal_cls must inherit from decimal.Decimal')
         
-        decimal.getcontext().traps[_ZeroDivision] = True
+        getcontext().traps[_ZeroDivision] = True
         _ = decimal_cls
         self._max_safe_number: DT = _(max_safe_number)
         self._max_exponent: DT = _(max_exponent)
