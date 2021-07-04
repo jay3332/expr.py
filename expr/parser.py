@@ -129,10 +129,10 @@ class Parser(metaclass=ParserMeta):
 
         self._decimal_cls: Type[DT] = decimal_cls
 
-        self.__lexer_generator__: Optional[LGT] = lexer_cls()
+        _lexer = lexer_cls()
+        self.__lexer_generator__: Optional[LGT] = _lexer
         self.__parser_generator__: ParserGenerator = ParserGenerator(
-            ['NUMBER', 'NAME', 'LPAREN', 'RPAREN', 'ADD', 'SUB', 'MUL',
-             'DIV', 'FLOORDIV', 'MOD', 'FAC', 'POW', 'EQ'],
+            [rule.name for rule in _lexer.rules],
             precedence=[
                 ('right', ['UMINUS']),
                 ('left', ['ADD', 'SUB']),
