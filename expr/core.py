@@ -1,5 +1,11 @@
-from typing import Optional, Tuple
+from decimal import Decimal
+from typing import Optional, Tuple, Type, TypeVar, Union
+
 from .parser import Parser
+
+
+C = TypeVar('C', bound=Union[float, Decimal])
+
 
 __all__: Tuple[str, ...] = (
     'evaluate',
@@ -10,13 +16,13 @@ __all__: Tuple[str, ...] = (
 state: Optional[Parser] = None
 
 
-def evaluate(expr: str, /, **kwargs) -> float:
+def evaluate(expr: str, /, *, cls: Type[C] = Decimal, **kwargs) -> C:
     global state
 
     if not state:
         state = Parser(**kwargs)
 
-    return state.evaluate(expr)
+    return state.evaluate(expr, cls=cls)
 
 
 def create_state(**kwargs) -> Parser:

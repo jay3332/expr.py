@@ -155,3 +155,16 @@ for boosts on both performance and precision.
 - Many functions now have positional-only arguments for slight performance boosts
     - This drops support for Python 3.7
 - Messages retrieved from `ParsingError.friendly` are now much more descriptive. 
+
+### v0.3
+
+#### What's new?
+- Unary plus is now supported (E.g. `+5`)
+- Scientific notation is now supported (E.g. `4E-2`)
+    - To reduce conflics, 'E' __must__ be captialized.   
+      This means that `2e9` would evaluate to `2 * e * 9`, for example.
+- The `cls` kwarg is now supported in `expr.evaluate`
+        
+#### Bug fixes
+- Catch `OverflowError` in the `expr.Overflow` parsing error.
+- Fix invalid typings with `Callable`

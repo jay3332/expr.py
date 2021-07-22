@@ -86,25 +86,25 @@ class ParserMeta(type):
 # noinspection PyArgumentList,PyUnresolvedReferences
 class Parser(metaclass=ParserMeta):
     def __init__(
-            self,
-            /,
-            *,
-            max_safe_number: float = 9e9,
-            max_exponent: float = 128,
-            max_factorial: float = 64,
-            builtins: Dict[str, Callable[[DT], DT]] = None,
-            constants: Dict[str, DT] = None,
-            variables: Dict[str, DT] = None,
-            decimal_cls: Type[DT] = Decimal,
-            lexer_cls: Type[LGT] = LexerGenerator
+        self,
+        /,
+        *,
+        max_safe_number: float = 9e9,
+        max_exponent: float = 128,
+        max_factorial: float = 64,
+        builtins: Dict[str, Callable[[DT], DT]] = None,
+        constants: Dict[str, DT] = None,
+        variables: Dict[str, DT] = None,
+        decimal_cls: Type[DT] = Decimal,
+        lexer_cls: Type[LGT] = LexerGenerator
     ) -> None:
         if not issubclass(decimal_cls, Decimal):
             raise TypeError('decimal_cls must inherit from decimal.Decimal')
         
         _ = decimal_cls
-        self._max_safe_number: DT = _(max_safe_number)
-        self._max_exponent: DT = _(max_exponent)
-        self._max_factorial: DT = _(max_factorial)
+        self._max_safe_number: DT = _(max_safe_number) if max_safe_number is not None else _('inf')
+        self._max_exponent: DT = _(max_exponent) if max_exponent is not None else _('inf')
+        self._max_factorial: DT = _(max_factorial) if max_factorial is not None else _('inf')
 
         _builtins: Dict[str, Callable[[DT], DT]] = {
             'rad': lambda d: _(math.radians(float(d))),
@@ -154,9 +154,6 @@ class Parser(metaclass=ParserMeta):
         }
 
         self._functions: Dict[str, Callable[[DT], DT]] = _builtins
-
-    def __repr__(self) -> str:
-        return f'<expr.{self.__class__.__name__}>'
 
     @rule('expr : NUMBER')
     def number(self, p: List[_Token], /) -> Number:
@@ -208,6 +205,10 @@ class Parser(metaclass=ParserMeta):
     def uminus(self, p: List[_Token], /) -> Any:
         return Number(-(p[1].eval()))
 
+    @rule("expr : ADD expr", precedence='UMINUS')
+    def upos(self, p: List[_Token], /) -> Any:
+        return p[1]
+
     @rule('expr : NAME EQ expr')
     def declare(self, p: List[_Token], /) -> Any:
         _name = p[0].getstr()
@@ -222,6 +223,10 @@ class Parser(metaclass=ParserMeta):
             return Number(self._functions[_name](_value))
 
         return Mul(self.getvar(p[0]), p[2])  # Probably this instead
+
+    @rule("expr : expr E expr", precedence='POW')
+    def scinot_e(self, p: List[_Token], /) -> Any:
+        return Mul(p[0], Pow(Number(10), p[2]))
 
     @rule('expr : NAME')
     def getvar(self, p: List[_Token], /) -> Any:
@@ -248,6 +253,9 @@ class Parser(metaclass=ParserMeta):
         self.__lexer__ = res = self.__lexer_generator__.build()
         return res
 
+    def __repr__(self, /) -> str:
+        return f'<expr.{self.__class__.__name__} object at {id(self):x}>'
+
     def __call__(self, expr: str, /, *, cls: Type[OT] = Decimal) -> Optional[OT]:
         return self.evaluate(expr, cls=cls)
 
@@ -264,6 +272,9 @@ class Parser(metaclass=ParserMeta):
 
         except (ZeroDivisionError, _ZeroDivision):
             raise DivisionByZero()
+
+        except (ValueError, OverflowError):
+            raise Overflow()
 
         except InvalidOperation as exc:
             if isinstance(exc.args[0][0], DivisionUndefined):

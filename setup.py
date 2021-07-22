@@ -3,9 +3,11 @@ from setuptools import setup
 
 
 with open('expr/__init__.py') as f:
+    r = f.read()
+
     try:
         version = re.search(
-            r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', f.read(), re.M
+            r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', r, re.M
         ).group(1)
     except AttributeError:
         raise RuntimeError('Could not identify version') from None
@@ -13,7 +15,7 @@ with open('expr/__init__.py') as f:
     # look at this boilerplate code
     try:
         author = re.search(
-            r'^__author__\s*=\s*[\'"]([^\'"]*)[\'"]', f.read(), re.M
+            r'^__author__\s*=\s*[\'"]([^\'"]*)[\'"]', r, re.M
         ).group(1)
     except AttributeError:
         author = 'jay3332'
